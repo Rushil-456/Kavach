@@ -1,5 +1,5 @@
 import React from "react";
-import { Info, Map, SmartphoneOff, ShieldAlert } from "lucide-react";
+import { Info, Map, ShieldAlert } from "lucide-react";
 
 export default function Guide({ isThreat }) {
   if (!isThreat) return null;
@@ -15,7 +15,7 @@ export default function Guide({ isThreat }) {
            <span><strong>Move horizontally into crowds:</strong> Proceed immediately to a mall, metro, or cafe. Do not go to your home or isolated areas.</span>
         </li>
         <li className="flex gap-3 text-sm text-slate-700 dark:text-slate-300">
-           <SmartphoneOff className="flex-shrink-0 text-kavach-danger/70 mt-0.5" size={16}/>
+           <ShieldAlert className="flex-shrink-0 text-kavach-danger/70 mt-0.5" size={16}/>
            <span><strong>Avoid confrontation:</strong> DO NOT search your bag or car right now. Collect evidence via the Report tab and contact authorities when safe.</span>
         </li>
       </ul>
