@@ -72,16 +72,16 @@ export default function Home() {
 
   return (
     <div className="px-4 pt-5 space-y-5">
-      <div className="animate-slide-up">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-kavach-silver dark:text-slate-500">
-          Threat Intelligence Feed
-        </p>
-        <h1 className="text-2xl font-bold text-kavach-navy dark:text-white mt-1">
-          Shield <span className="text-kavach-teal dark:text-kavach-blue">Active</span>.
-        </h1>
-        <p className="text-sm text-kavach-silver dark:text-slate-400 mt-1">
-          Kavach relies purely on LIVE sensor data. No dummy logic.
-        </p>
+      <div className="animate-slide-up flex items-center gap-3">
+        <img src="/Kavach/kavach-image.jpeg" alt="Kavach Logo" className="w-12 h-12 rounded-xl object-cover shadow-sm border border-kavach-silver/20" />
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-kavach-silver dark:text-slate-500">
+            Threat Intelligence Feed
+          </p>
+          <h1 className="text-2xl font-bold text-kavach-navy dark:text-white mt-1">
+            Kavach <span className="text-kavach-teal dark:text-kavach-blue">Active</span>.
+          </h1>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-2">

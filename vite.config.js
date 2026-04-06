@@ -18,8 +18,8 @@ export default defineConfig({
         background_color: '#ffffff',
         display: 'standalone',
         icons: [
-          { src: 'kavach-logo.png', sizes: '192x192', type: 'image/png' },
-          { src: 'kavach-logo.png', sizes: '512x512', type: 'image/png' }
+          { src: 'notes-icon.png', sizes: '192x192', type: 'image/png' },
+          { src: 'notes-icon.png', sizes: '512x512', type: 'image/png' }
         ]
       }
     })
