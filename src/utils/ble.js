@@ -39,8 +39,7 @@ export async function startBLEScan({ onAdvertisement, onError, onUnsupported } =
   try {
     // Request scan — acceptAllAdvertisements: true to capture unknown trackers
     scan = await navigator.bluetooth.requestLEScan({
-      acceptAllAdvertisements: true,
-      keepRepeatedDevices: true,
+      acceptAllAdvertisements: true
     });
 
     // Listen for advertising events

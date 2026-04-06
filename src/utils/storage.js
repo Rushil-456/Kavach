@@ -31,13 +31,17 @@ export async function createSession() {
   return sessionId;
 }
 
-export async function logEvent(sessionId, location, devices) {
+export async function logEvent(sessionId, location, devices, meta = {}) {
   const db = await initDB();
+  const isSuspicious = Boolean(
+    meta.isSuspicious ?? (Array.isArray(devices) && devices.some(d => d.isThreat))
+  );
   await db.add(STORE_LOGS, {
     sessionId,
     timestamp: new Date().toISOString(),
-    location, 
-    devices   
+    location,
+    devices,
+    isSuspicious,
   });
 }
 

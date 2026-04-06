@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { getSessionLogs } from "../utils/storage";
+import { haversineDistance } from "../utils/detection";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -71,7 +72,9 @@ export default function KavachMap({ sessionId, compact = false }) {
   const suspPath = [];
   
   logs.forEach((log) => {
-    const isThreat = log.devices.some(d => d.isThreat);
+    const isThreat =
+      Boolean(log.isSuspicious) ||
+      (Array.isArray(log.devices) && log.devices.some((d) => d.isThreat));
     if (isThreat) suspPath.push([log.location.lat, log.location.lng]);
     else safePath.push([log.location.lat, log.location.lng]);
   });
@@ -80,10 +83,34 @@ export default function KavachMap({ sessionId, compact = false }) {
   const startPoint = allPoints[0];
   const lastPoint = allPoints[allPoints.length - 1];
 
+  const nearestSafe = useMemo(() => {
+    if (!lastPoint) return null;
+    const pt = { lat: lastPoint[0], lng: lastPoint[1] };
+    let best = null;
+    let bestD = Infinity;
+    for (const z of SAFE_ZONES) {
+      const d = haversineDistance(pt, { lat: z.lat, lng: z.lng });
+      if (d < bestD) {
+        bestD = d;
+        best = z;
+      }
+    }
+    return best ? { zone: best, metres: Math.round(bestD) } : null;
+  }, [lastPoint]);
+
   return (
     <div id="kavachmap-container" className="rounded-2xl overflow-hidden border border-slate-700/60 shadow-2xl" style={{ height }}>
-      <MapContainer center={startPoint} zoom={15} scrollWheelZoom={false} zoomControl={false} style={{ height: "100%", width: "100%", background: "#0b0f1a" }} attributionControl={false}>
-        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" subdomains="abcd" maxZoom={20} />
+      {nearestSafe && (
+        <div className="text-[10px] font-mono text-slate-300 bg-slate-900/90 px-2 py-1 border-b border-slate-700/80">
+          Nearest safe zone: {nearestSafe.zone.label} (~{nearestSafe.metres} m)
+        </div>
+      )}
+      <MapContainer center={startPoint} zoom={15} scrollWheelZoom={false} zoomControl style={{ height: nearestSafe ? "calc(100% - 28px)" : "100%", width: "100%", background: "#0b0f1a" }}>
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          maxZoom={19}
+        />
         <FitBounds path={allPoints} />
         
         {safePath.length > 1 && <Polyline positions={safePath} pathOptions={{ color: "#38bdf8", weight: 4, opacity: 0.85, dashArray: "8 4" }} />}

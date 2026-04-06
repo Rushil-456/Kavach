@@ -79,27 +79,31 @@ export function totalPathDistance(positions) {
  *   reason: string
  * }}
  */
-export function detectStalker(signalHistory, movementHistory) {
+/**
+ * @param {{ accelMoving?: boolean }} [options] — DeviceMotion hint when GPS delta is small
+ */
+export function detectStalker(signalHistory, movementHistory, options = {}) {
   const variance = calcVariance(signalHistory);
   const distance = totalPathDistance(movementHistory);
+  const userMoved = distance > 20 || Boolean(options.accelMoving);
 
-  // Primary condition: near-constant RSSI while user has moved significantly
-  const isStalker = variance < 5 && distance > 20;
+  // Primary condition: near-constant RSSI while user has moved (GPS or motion)
+  const isStalker = variance < 5 && userMoved;
 
   // Confidence score — higher when variance is very low and distance is large
   const varianceScore = Math.max(0, 1 - variance / 5);       // 0..1 (lower variance → higher)
-  const distanceScore = Math.min(1, distance / 200);          // 0..1 (caps at 200 m)
+  const distanceScore = Math.min(1, distance / 200 + (options.accelMoving ? 0.25 : 0));
   const confidence    = Math.round(varianceScore * distanceScore * 100);
 
   let reason = "";
   if (isStalker) {
     reason = `RSSI variance of ${variance.toFixed(2)} dB² is critically low while user moved ${distance.toFixed(0)} m. Device is likely tracking you.`;
-  } else if (variance >= 5 && distance <= 20) {
+  } else if (variance >= 5 && !userMoved) {
     reason = "Not enough movement data and RSSI is normal.";
   } else if (variance >= 5) {
     reason = `RSSI variance (${variance.toFixed(2)}) is high — device appears stationary. Safe.`;
   } else {
-    reason = `User has moved only ${distance.toFixed(0)} m. Monitoring continues.`;
+    reason = `Insufficient movement (${distance.toFixed(0)} m GPS). Monitoring continues. Try walking or enable motion.`;
   }
 
   return { isStalker, variance, distance, confidence, reason };

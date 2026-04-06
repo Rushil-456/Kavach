@@ -69,23 +69,8 @@ export default function Scanner() {
     alertTriggeredRef.current = false;
     historyRef.current = { timeMap: [] };
     
-    // Create new DB session immediately
-    const sid = await createSession();
-    sessionIdRef.current = sid;
-
-    // Start GPS Tracking
-    if ("geolocation" in navigator) {
-      geoWatchRef.current = navigator.geolocation.watchPosition(
-        pos => { locationRef.current = { lat: pos.coords.latitude, lng: pos.coords.longitude }; },
-        err => console.warn("GPS error", err),
-        { enableHighAccuracy: true, maximumAge: 1000 }
-      );
-    } else {
-      setBleError("Geolocation not available. Tracker detection accuracy will be limited.");
-    }
-
-    // Start BLE Tracking
-    const { stop } = await startBLEScan({
+    // START BLE IMMEDIATELY - Consumes User Gesture Activation
+    const blePromise = startBLEScan({
       onAdvertisement: async entry => {
         setScanCount(c => c + 1);
         
@@ -120,7 +105,7 @@ export default function Scanner() {
           if (result.isStalker) {
             if (!alertTriggeredRef.current) {
                setAlert(result);
-               markSessionAsThreat(sessionIdRef.current, 'HIGH');
+               if(sessionIdRef.current) markSessionAsThreat(sessionIdRef.current, 'HIGH');
                shouldVibrate = true;
                alertTriggeredRef.current = true;
             } else if (entry.rssi > -60) {
@@ -137,16 +122,32 @@ export default function Scanner() {
         }
 
         // Feature 10: Store to IndexedDB for Evidence Gen and Replay
-        if (locationRef.current) {
-          // Send summary of the frame to the DB payload
-          const snapshot = { name: entry.name, rssi: entry.rssi, isThreat: false }; // Note: isThreat resolution async mapped 
-          // For realtime, we log exactly what we see
+        if (locationRef.current && sessionIdRef.current) {
+          const snapshot = { name: entry.name, rssi: entry.rssi, isThreat: false }; 
           await logEvent(sessionIdRef.current, locationRef.current, [snapshot]);
         }
       },
       onError: err => { setBleError(err.message); setIsScanning(false); },
       onUnsupported: () => { setBleError("Web Bluetooth unavailable. Ensure experimental flags are set on Chrome for Android."); setIsScanning(false); },
     });
+
+    const { stop } = await blePromise;
+    if (!stop) return; // if permissions failed or unsupported
+
+    // Now safe to do other await calls safely
+    const sid = await createSession();
+    sessionIdRef.current = sid;
+
+    // Start GPS Tracking safely
+    if ("geolocation" in navigator) {
+      geoWatchRef.current = navigator.geolocation.watchPosition(
+        pos => { locationRef.current = { lat: pos.coords.latitude, lng: pos.coords.longitude }; },
+        err => console.warn("GPS error", err),
+        { enableHighAccuracy: true, maximumAge: 1000 }
+      );
+    } else {
+      setBleError("Geolocation not available. Tracker detection accuracy will be limited.");
+    }
     
     stopScanRef.current = stop;
     setIsScanning(true);
