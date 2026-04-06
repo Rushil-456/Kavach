@@ -1,16 +1,8 @@
-import React, { useEffect, useRef } from "react";
-import {
-  MapContainer,
-  TileLayer,
-  Polyline,
-  Marker,
-  Popup,
-  useMap,
-} from "react-leaflet";
+import React, { useEffect, useState } from "react";
+import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
-import { MOCK_TRACKING_DATA, SAFE_ZONES } from "../utils/mockData";
+import { getSessionLogs } from "../utils/storage";
 
-// ── Fix Leaflet default icon path broken by Vite bundler ──────────────────
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -18,22 +10,10 @@ L.Icon.Default.mergeOptions({
   shadowUrl:     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-// ── Custom SVG marker factory ─────────────────────────────────────────────
 function createSvgIcon(color, label) {
   return L.divIcon({
-    className: "",
-    iconSize:  [36, 36],
-    iconAnchor:[18, 36],
-    popupAnchor:[0, -36],
-    html: `
-      <div style="
-        width:36px;height:36px;display:flex;align-items:center;justify-content:center;
-        background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);
-        box-shadow:0 0 12px ${color}88;border:2px solid rgba(255,255,255,0.25);
-      ">
-        <span style="transform:rotate(45deg);font-size:14px;">${label}</span>
-      </div>
-    `,
+    className: "", iconSize:  [36, 36], iconAnchor:[18, 36], popupAnchor:[0, -36],
+    html: `<div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 0 12px ${color}88;border:2px solid rgba(255,255,255,0.25);"><span style="transform:rotate(45deg);font-size:14px;">${label}</span></div>`,
   });
 }
 
@@ -43,125 +23,85 @@ const SAFE_ZONE_ICONS = {
   college: createSvgIcon("#a78bfa", "🎓"),
   signal:  createSvgIcon("#f59e0b", "🚦"),
 };
-
 const USER_START_ICON = createSvgIcon("#38bdf8",  "🧍");
 const ALERT_ICON      = createSvgIcon("#f43f5e",  "⚠️");
 
-// ── Split path at the suspicious boundary ─────────────────────────────────
-const SAFE_PATH = MOCK_TRACKING_DATA
-  .filter(d => !d.isSuspicious)
-  .map(d => [d.lat, d.lng]);
+const SAFE_ZONES = [
+  { lat: 12.9352, lng: 77.6245, label: "Forum Mall",          type: "mall"    },
+  { lat: 12.9279, lng: 77.6271, label: "Koramangala Metro",   type: "metro"   },
+  { lat: 12.9341, lng: 77.6186, label: "Jyoti Nivas College", type: "college" },
+  { lat: 12.9398, lng: 77.6270, label: "Sony World Signal",   type: "signal"  },
+];
 
-const SUSPICIOUS_PATH = MOCK_TRACKING_DATA
-  .filter(d => d.isSuspicious)
-  .map(d => [d.lat, d.lng]);
-
-// Stitch the last safe point to the first suspicious — no gap in polyline
-const STITCH = (() => {
-  const lastSafe   = MOCK_TRACKING_DATA.findLast(d => !d.isSuspicious);
-  const firstSusp  = MOCK_TRACKING_DATA.find  (d =>  d.isSuspicious);
-  return lastSafe && firstSusp
-    ? [[lastSafe.lat, lastSafe.lng], [firstSusp.lat, firstSusp.lng]]
-    : [];
-})();
-
-const LAST_POINT  = MOCK_TRACKING_DATA[MOCK_TRACKING_DATA.length - 1];
-const FIRST_POINT = MOCK_TRACKING_DATA[0];
-
-// ── Fit-bounds helper component ───────────────────────────────────────────
-function FitBounds() {
+function FitBounds({ path }) {
   const map = useMap();
   useEffect(() => {
-    const bounds = MOCK_TRACKING_DATA.map(d => [d.lat, d.lng]);
-    map.fitBounds(bounds, { padding: [40, 40] });
-  }, [map]);
+    if (path.length > 0) map.fitBounds(path, { padding: [40, 40] });
+  }, [map, path]);
   return null;
 }
 
-// ── Main Map Component ────────────────────────────────────────────────────
-export default function KavachMap({ compact = false }) {
+export default function KavachMap({ sessionId, compact = false }) {
+  const [logs, setLogs] = useState([]);
+
+  useEffect(() => {
+    let interval;
+    const fetchLogs = async () => {
+      if (!sessionId) return;
+      const data = await getSessionLogs(sessionId);
+      setLogs(data);
+    };
+    fetchLogs();
+    interval = setInterval(fetchLogs, 2000);
+    return () => clearInterval(interval);
+  }, [sessionId]);
+
   const height = compact ? "200px" : "320px";
+  
+  if (!sessionId || logs.length === 0) {
+    return (
+      <div className="rounded-2xl border border-slate-700/60 shadow-2xl flex items-center justify-center text-slate-500 bg-slate-900" style={{ height }}>
+         Waiting for GPS and BLE data...
+      </div>
+    );
+  }
+
+  // Calculate paths
+  const safePath = [];
+  const suspPath = [];
+  
+  logs.forEach((log) => {
+    const isThreat = log.devices.some(d => d.isThreat);
+    if (isThreat) suspPath.push([log.location.lat, log.location.lng]);
+    else safePath.push([log.location.lat, log.location.lng]);
+  });
+
+  const allPoints = logs.map(l => [l.location.lat, l.location.lng]);
+  const startPoint = allPoints[0];
+  const lastPoint = allPoints[allPoints.length - 1];
 
   return (
-    <div
-      className="rounded-2xl overflow-hidden border border-slate-700/60 shadow-2xl"
-      style={{ height }}
-    >
-      <MapContainer
-        center={[12.933, 77.627]}
-        zoom={15}
-        scrollWheelZoom={false}
-        zoomControl={false}
-        style={{ height: "100%", width: "100%", background: "#0b0f1a" }}
-        attributionControl={false}
-      >
-        {/* Dark map tiles */}
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-          subdomains="abcd"
-          maxZoom={20}
-        />
+    <div id="kavachmap-container" className="rounded-2xl overflow-hidden border border-slate-700/60 shadow-2xl" style={{ height }}>
+      <MapContainer center={startPoint} zoom={15} scrollWheelZoom={false} zoomControl={false} style={{ height: "100%", width: "100%", background: "#0b0f1a" }} attributionControl={false}>
+        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" subdomains="abcd" maxZoom={20} />
+        <FitBounds path={allPoints} />
+        
+        {safePath.length > 1 && <Polyline positions={safePath} pathOptions={{ color: "#38bdf8", weight: 4, opacity: 0.85, dashArray: "8 4" }} />}
+        {suspPath.length > 1 && <Polyline positions={suspPath} pathOptions={{ color: "#f43f5e", weight: 5, opacity: 0.9 }} />}
 
-        <FitBounds />
-
-        {/* Safe portion of path — blue */}
-        {SAFE_PATH.length > 1 && (
-          <Polyline
-            positions={SAFE_PATH}
-            pathOptions={{ color: "#38bdf8", weight: 4, opacity: 0.85, dashArray: "8 4" }}
-          />
-        )}
-
-        {/* Bridge safe→suspicious */}
-        {STITCH.length === 2 && (
-          <Polyline
-            positions={STITCH}
-            pathOptions={{ color: "#f59e0b", weight: 4, opacity: 0.8, dashArray: "4 4" }}
-          />
-        )}
-
-        {/* Suspicious portion — red animated */}
-        {SUSPICIOUS_PATH.length > 1 && (
-          <Polyline
-            positions={SUSPICIOUS_PATH}
-            pathOptions={{ color: "#f43f5e", weight: 5, opacity: 0.9 }}
-          />
-        )}
-
-        {/* User start marker */}
-        <Marker position={[FIRST_POINT.lat, FIRST_POINT.lng]} icon={USER_START_ICON}>
-          <Popup className="kavach-popup">
-            <div className="text-slate-900 text-xs font-semibold">
-              Journey Start<br />
-              <span className="text-slate-600 font-normal">{FIRST_POINT.timeLabel}</span>
-            </div>
-          </Popup>
+        <Marker position={startPoint} icon={USER_START_ICON}>
+          <Popup><div className="text-slate-900 text-xs font-semibold">Journey Start</div></Popup>
         </Marker>
+        
+        {suspPath.length > 0 && (
+          <Marker position={suspPath[suspPath.length - 1] || lastPoint} icon={ALERT_ICON}>
+            <Popup><div className="text-slate-900 text-xs font-semibold">⚠️ Tracker Detected</div></Popup>
+          </Marker>
+        )}
 
-        {/* Alert marker at last suspicious point */}
-        <Marker position={[LAST_POINT.lat, LAST_POINT.lng]} icon={ALERT_ICON}>
-          <Popup>
-            <div className="text-slate-900 text-xs font-semibold">
-              ⚠️ Tracker Detected<br />
-              <span className="text-slate-600 font-normal">RSSI stable for 450 m</span>
-            </div>
-          </Popup>
-        </Marker>
-
-        {/* Safe zone markers */}
         {SAFE_ZONES.map(zone => (
-          <Marker
-            key={zone.label}
-            position={[zone.lat, zone.lng]}
-            icon={SAFE_ZONE_ICONS[zone.type] || SAFE_ZONE_ICONS.signal}
-          >
-            <Popup>
-              <div className="text-slate-900 text-xs font-semibold">
-                🛡️ {zone.label}<br />
-                <span className="text-emerald-600 font-normal">Safe Zone</span>
-              </div>
-            </Popup>
+          <Marker key={zone.label} position={[zone.lat, zone.lng]} icon={SAFE_ZONE_ICONS[zone.type] || SAFE_ZONE_ICONS.signal}>
+            <Popup><div className="text-slate-900 text-xs font-semibold">🛡️ {zone.label}<br /><span className="text-emerald-600 font-normal">Safe Zone</span></div></Popup>
           </Marker>
         ))}
       </MapContainer>

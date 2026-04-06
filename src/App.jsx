@@ -1,11 +1,18 @@
-import React from "react";
+import React, { useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
 import Home from "./pages/Home";
 import Analyze from "./pages/Analyze";
 import Settings from "./pages/Settings";
+import StealthMode from "./components/StealthMode";
 
 export default function App() {
+  const [unlocked, setUnlocked] = useState(false);
+
+  if (!unlocked) {
+    return <StealthMode onUnlock={() => setUnlocked(true)} />;
+  }
+
   return (
     <BrowserRouter>
       <Layout>
