@@ -21,11 +21,32 @@ export default function Guide({ isThreat }) {
       </ul>
       <div className="mt-5 border-t border-kavach-danger/20 pt-4">
         <h4 className="text-xs font-semibold text-kavach-danger mb-2 uppercase tracking-wide">Emergency SOS</h4>
-        <button 
+        <button
+          type="button"
           onClick={() => {
-            const loc = "https://maps.google.com/?q=current";
-            const text = encodeURIComponent(`URGENT: I suspect I am being tracked by an unknown device. Kavach has detected a persistent tracker moving with my location. Please call me immediately. Location: ${loc}`);
-            window.open(`https://wa.me/?text=${text}`, "_blank");
+            const openWa = (body) => {
+              window.open(`https://wa.me/?text=${encodeURIComponent(body)}`, "_blank");
+            };
+            if (!("geolocation" in navigator)) {
+              openWa(
+                "URGENT: I may be followed — Kavach flagged persistent BLE proximity. Please call me; I could not attach GPS."
+              );
+              return;
+            }
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                const { latitude: lat, longitude: lng } = pos.coords;
+                const maps = `https://maps.google.com/?q=${lat},${lng}`;
+                openWa(
+                  `URGENT: I may be followed — Kavach flagged persistent BLE proximity while I moved. Please check in. Location: ${maps}`
+                );
+              },
+              () =>
+                openWa(
+                  "URGENT: I may be followed — Kavach flagged a risk. GPS unavailable; please call me."
+                ),
+              { enableHighAccuracy: true, maximumAge: 5000 }
+            );
           }}
           className="w-full bg-kavach-danger text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-700 transition"
         >

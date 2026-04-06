@@ -39,10 +39,27 @@ export default function Replay({ sessionId }) {
   if (logs.length === 0) return <div className="p-4 text-slate-500">No data to replay</div>;
 
   const currentLog = logs[currentIndex];
-  // Calculate historical lines up to index
-  const pastPath = logs.slice(0, currentIndex + 1).map(l => [l.location.lat, l.location.lng]);
-  const isThreatNow = currentLog.devices.some(d => d.isThreat);
-  const allPath = logs.map(l => [l.location.lat, l.location.lng]);
+  const pastLogs = logs.slice(0, currentIndex + 1);
+  const pastPath = pastLogs.map((l) => [l.location.lat, l.location.lng]);
+  const isThreatNow =
+    Boolean(currentLog.isSuspicious) ||
+    (Array.isArray(currentLog.devices) && currentLog.devices.some((d) => d.isThreat));
+  const allPath = logs.map((l) => [l.location.lat, l.location.lng]);
+
+  const edgePolylines = [];
+  for (let i = 1; i < pastLogs.length; i++) {
+    const a = pastLogs[i - 1];
+    const b = pastLogs[i];
+    const suspicious = Boolean(b.isSuspicious) || Boolean(a.isSuspicious);
+    edgePolylines.push({
+      key: i,
+      positions: [
+        [a.location.lat, a.location.lng],
+        [b.location.lat, b.location.lng],
+      ],
+      suspicious,
+    });
+  }
 
   return (
     <div className="bg-slate-900 border border-slate-700/50 rounded-2xl overflow-hidden shadow-card">
@@ -52,16 +69,28 @@ export default function Replay({ sessionId }) {
       </div>
 
       <div style={{ height: "300px" }} className="relative">
-        <MapContainer center={allPath[0]} zoom={15} zoomControl={false} style={{height: "100%", width: "100%", background: "#0b0f1a"}}>
-           <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+        <MapContainer center={allPath[0]} zoom={15} zoomControl={false} style={{ height: "100%", width: "100%", background: "#0b0f1a" }}>
+           <TileLayer
+             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+             maxZoom={19}
+           />
            <ReplayBounds path={allPath} />
-           
-           {/* Faint complete path */}
-           <Polyline positions={allPath} pathOptions={{ color: "#334155", weight: 3, opacity: 0.5 }} />
-           
-           {/* Active reconstructed path */}
-           {pastPath.length > 1 && <Polyline positions={pastPath} pathOptions={{ color: isThreatNow ? "#f43f5e" : "#38bdf8", weight: 4 }} />}
-           
+
+           <Polyline positions={allPath} pathOptions={{ color: "#334155", weight: 3, opacity: 0.45 }} />
+
+           {edgePolylines.map(({ key, positions, suspicious }) => (
+             <Polyline
+               key={key}
+               positions={positions}
+               pathOptions={{
+                 color: suspicious ? "#f43f5e" : "#38bdf8",
+                 weight: 4,
+                 opacity: 0.95,
+               }}
+             />
+           ))}
+
            <Marker position={pastPath[pastPath.length - 1]} icon={isThreatNow ? ACTIVE_ICON : START_ICON} />
         </MapContainer>
       </div>

@@ -7,7 +7,7 @@ export default function StealthMode({ onUnlock }) {
   const handleSearch = (e) => {
     const val = e.target.value;
     setSearchQuery(val);
-    if (val === '6426') {
+    if (val === "1234") {
       onUnlock();
     }
   };

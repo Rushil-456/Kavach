@@ -38,8 +38,10 @@ export async function startBLEScan({ onAdvertisement, onError, onUnsupported } =
 
   try {
     // Request scan — acceptAllAdvertisements: true to capture unknown trackers
+    // keepRepeatedAdvertisements is absolutely critical to receive multiple continuous RSSI updates per device!
     scan = await navigator.bluetooth.requestLEScan({
-      acceptAllAdvertisements: true
+      acceptAllAdvertisements: true,
+      keepRepeatedAdvertisements: true
     });
 
     // Listen for advertising events

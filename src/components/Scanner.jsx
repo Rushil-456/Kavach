@@ -131,8 +131,8 @@ export default function Scanner() {
       onUnsupported: () => { setBleError("Web Bluetooth unavailable. Ensure experimental flags are set on Chrome for Android."); setIsScanning(false); },
     });
 
-    const { stop } = await blePromise;
-    if (!stop) return; // if permissions failed or unsupported
+    const { scan, stop } = await blePromise;
+    if (!scan) return; // if permissions failed or unsupported
 
     // Now safe to do other await calls safely
     const sid = await createSession();

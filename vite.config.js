@@ -13,8 +13,8 @@ export default defineConfig({
       manifest: {
         name: 'My Notes',
         short_name: 'Notes',
-        description: 'A simple notes app',
-        theme_color: '#ffffff',
+        description: 'Kavach PWA (stealth shell): anti-stalking signal forensics — unlock from Notes.',
+        theme_color: '#0b0f1a',
         background_color: '#ffffff',
         display: 'standalone',
         icons: [

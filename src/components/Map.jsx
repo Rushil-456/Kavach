@@ -99,13 +99,20 @@ export default function KavachMap({ sessionId, compact = false }) {
   }, [lastPoint]);
 
   return (
-    <div id="kavachmap-container" className="rounded-2xl overflow-hidden border border-slate-700/60 shadow-2xl" style={{ height }}>
+    <div id="kavachmap-container" className="rounded-2xl overflow-hidden border border-slate-700/60 shadow-2xl flex flex-col" style={{ height }}>
       {nearestSafe && (
-        <div className="text-[10px] font-mono text-slate-300 bg-slate-900/90 px-2 py-1 border-b border-slate-700/80">
+        <div className="text-[10px] font-mono text-slate-300 bg-slate-900/90 px-2 py-1 border-b border-slate-700/80 shrink-0">
           Nearest safe zone: {nearestSafe.zone.label} (~{nearestSafe.metres} m)
         </div>
       )}
-      <MapContainer center={startPoint} zoom={15} scrollWheelZoom={false} zoomControl style={{ height: nearestSafe ? "calc(100% - 28px)" : "100%", width: "100%", background: "#0b0f1a" }}>
+      <MapContainer
+        center={startPoint}
+        zoom={15}
+        scrollWheelZoom={false}
+        zoomControl
+        className="flex-1 min-h-0 z-0"
+        style={{ height: "100%", width: "100%", background: "#0b0f1a" }}
+      >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

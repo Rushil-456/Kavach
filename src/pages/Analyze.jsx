@@ -122,7 +122,7 @@ export default function Analyze() {
             <span className="section-label">Realtime DB Chart</span>
           </div>
         </div>
-        <div className="p-4" style={{ height:"210px" }}>
+        <div id="kavach-chart-export" className="p-4 bg-white dark:bg-slate-900 rounded-lg" style={{ height: "210px" }}>
           <Line data={buildChartData(labels, datasets)} options={CHART_OPTIONS} />
         </div>
       </div>
