@@ -4,6 +4,7 @@ import {
   AlertTriangle, ChevronRight, Eye, Radio,
 } from "lucide-react";
 import { clsx } from "clsx";
+import Scanner from "../components/Scanner";
 import KavachMap from "../components/Map";
 import { getAllSessions } from "../utils/storage";
 
@@ -88,6 +89,11 @@ export default function Home() {
         <StatCard label="Threats"   value={threatCount}    accent={threatCount > 0 ? "danger" : "teal"} delay={80}  />
         <StatCard label="Metres"    value="Live" accent="navy"   delay={120} />
         <StatCard label="Safe Days" value={sessions.length - threatCount}    accent="teal"   delay={160} />
+      </div>
+
+      <div className="animate-slide-up space-y-2 mt-4" style={{ animationDelay:"160ms" }}>
+         <SectionHeading icon={Radio} label="Live Detection Engine" />
+         <Scanner />
       </div>
 
       {latestSession && latestSession.isThreat && (

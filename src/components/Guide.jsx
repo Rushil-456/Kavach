@@ -19,6 +19,19 @@ export default function Guide({ isThreat }) {
            <span><strong>Avoid confrontation:</strong> DO NOT search your bag or car right now. Collect evidence via the Report tab and contact authorities when safe.</span>
         </li>
       </ul>
+      <div className="mt-5 border-t border-kavach-danger/20 pt-4">
+        <h4 className="text-xs font-semibold text-kavach-danger mb-2 uppercase tracking-wide">Emergency SOS</h4>
+        <button 
+          onClick={() => {
+            const loc = "https://maps.google.com/?q=current";
+            const text = encodeURIComponent(`URGENT: I suspect I am being tracked by an unknown device. Kavach has detected a persistent tracker moving with my location. Please call me immediately. Location: ${loc}`);
+            window.open(`https://wa.me/?text=${text}`, "_blank");
+          }}
+          className="w-full bg-kavach-danger text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-700 transition"
+        >
+           <ShieldAlert size={16}/> Send Silent WhatsApp SOS
+        </button>
+      </div>
     </div>
   );
 }
